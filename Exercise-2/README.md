@@ -1,68 +1,149 @@
-# Exercise 2: Deploy a Flask App on Minikube
+# Exercise 2: Deploy a Flask App on Minikube Using kubectl and YAML
 
-## Aim
-Deploy a Flask application on Kubernetes using Docker, Minikube, kubectl, and YAML.
+## Objective
 
-## Files
-- app.py: Flask application.
-- Dockerfile: Builds the Docker image.
-- flask-deployment.yaml: Defines the Deployment and NodePort Service.
+Deploy a Python Flask application to Kubernetes using Docker, Minikube, kubectl, and YAML.
 
-## Procedure
+## Prerequisites
 
-1. Build the Docker image:
-   docker buildx build --builder default --no-cache --load -t flask-app:latest .
+- Docker Desktop with WSL integration
+- Minikube
+- kubectl
+- Ubuntu on WSL
 
-2. Load the image into Minikube:
-   minikube image load flask-app:latest -p devops-multinode
+## Technologies Used
 
-3. Deploy the application:
-   kubectl apply -f flask-deployment.yaml
+- Python and Flask
+- Docker
+- Kubernetes
+- Minikube
+- YAML
 
-4. Check the deployment:
-   kubectl rollout status deployment/flask-app
-   kubectl get pods -l app=flask-app
-   kubectl get services flask-app-service
+## Project Structure
 
-5. Access the application:
-   minikube service flask-app-service -p devops-multinode --url
+```text
+Exercise-2/
+├── app.py
+├── Dockerfile
+├── flask-deployment.yaml
+└── README.md
+```
 
-6. Test the returned URL in another terminal using curl.
+## Step 1: Check the Cluster
+
+```bash
+minikube status -p devops-multinode
+kubectl get nodes
+```
+
+## Step 2: Create the Flask Application
+
+The `app.py` file runs a Flask server on port 15000 and returns a greeting.
+
+```python
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Hello from Flask on Kubernetes!"
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=15000)
+```
+
+## Step 3: Create the Docker Image
+
+The Dockerfile uses Python 3.8, installs Flask, copies the application, and starts the server.
+
+Build the image:
+
+```bash
+docker buildx build --builder default --no-cache --load -t flask-app:latest .
+```
+
+## Step 4: Load the Image into Minikube
+
+```bash
+minikube image load flask-app:latest -p devops-multinode
+minikube image ls -p devops-multinode | grep flask-app
+```
+
+## Step 5: Configure Kubernetes
+
+The `flask-deployment.yaml` file contains both a Deployment and a NodePort Service.
+
+- **Deployment:** Manages the Flask Pod.
+- **replicas: 1:** Requests one Pod.
+- **imagePullPolicy: Never:** Uses the locally available image instead of pulling it from a registry.
+- **containerPort: 15000:** Specifies the application's container port.
+- **Service:** Exposes the application inside Kubernetes.
+- **targetPort: 15000:** Forwards traffic to the Flask application.
+- **NodePort:** Makes the application accessible through Minikube's service-access mechanism.
+
+## Step 6: Deploy the Application
+
+```bash
+kubectl apply -f flask-deployment.yaml
+kubectl rollout status deployment/flask-app
+```
+
+## Step 7: Verify the Deployment
+
+```bash
+kubectl get deployments
+kubectl get pods -l app=flask-app
+kubectl describe deployment flask-app
+kubectl logs deployment/flask-app
+kubectl get services flask-app-service
+```
+
+The Pod should reach the `Running` state, and the Deployment should show one ready replica.
+
+## Step 8: Access the Application
+
+Run:
+
+```bash
+minikube service flask-app-service -p devops-multinode --url
+```
+
+Use the URL printed by Minikube. The port may change between runs. When using the Docker driver on WSL, keep the forwarding terminal open.
+
+Test from a second terminal, replacing the example URL with the actual one:
+
+```bash
+curl http://127.0.0.1:40341
+```
 
 Expected response:
+
+```text
 Hello from Flask on Kubernetes!
+```
 
-## Questions and Answers
+## Architecture
 
-### 1. What does minikube service --url do?
-It provides a URL to access a Service running in Minikube.
-
-### 2. What is targetPort?
-It specifies the port on the application container that receives Service traffic.
-
-### 3. What is the difference between port and targetPort?
-port is the Service port, while targetPort is the destination port on the application Pod.
-
-### 4. What is kubectl?
-kubectl is the command-line tool used to manage Kubernetes resources.
-
-### 5. What does kubectl apply -f do?
-It creates or updates resources defined in a YAML file.
-
-### 6. What is a Deployment?
-A Deployment manages Pods and supports scaling and rolling updates.
-
-### 7. What is a Service?
-A Service provides a stable network endpoint for accessing selected Pods.
-
-### 8. What is NodePort?
-NodePort exposes a Service through a port on Kubernetes nodes.
-
-### 9. Why use imagePullPolicy: Never?
-It prevents Kubernetes from pulling the image from a registry. The image must already be available on the node running the Pod.
-
-### 10. Why use port 15000?
-The Flask application listens on port 15000, so the containerPort and Service targetPort are configured to match it.
+```text
+Client (curl / Browser)
+          |
+          v
+Minikube Service Access
+          |
+          v
+NodePort Service
+          |
+          v
+Flask Pod
+          |
+          v
+Docker Container
+          |
+          v
+Flask Application (Port 15000)
+```
 
 ## Result
-The Flask application was deployed on Minikube using a Kubernetes Deployment and NodePort Service. A curl request returned the expected response.
+
+The Flask application was containerized using Docker and deployed to the existing Minikube cluster. Kubernetes managed the Pod through a Deployment, and a NodePort Service enabled access to the application. The application returned the expected response when tested with curl.
