@@ -1,0 +1,58 @@
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Creating virtual environment and installing dependencies'
+                sh '''
+                    python3 -m venv .venv
+                    .venv/bin/pip install --upgrade pip
+                    .venv/bin/pip install -r Exercise-9/requirements.txt
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running unit tests'
+                sh '''
+                    cd Exercise-9
+                    ../.venv/bin/python -m unittest -v test_app.py
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Copying application to deployment directory'
+                sh '''
+                    mkdir -p "$WORKSPACE/python-app-deploy"
+                    cp Exercise-9/app.py "$WORKSPACE/python-app-deploy/"
+                    cp Exercise-9/requirements.txt "$WORKSPACE/python-app-deploy/"
+                '''
+            }
+        }
+
+        stage('Test Deployment') {
+            steps {
+                echo 'Verifying deployed application'
+                sh '''
+                    test -f "$WORKSPACE/python-app-deploy/app.py"
+                    test -f "$WORKSPACE/python-app-deploy/requirements.txt"
+                    echo "Deployment files verified successfully"
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check the console output.'
+        }
+    }
+}
