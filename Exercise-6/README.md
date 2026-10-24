@@ -111,3 +111,4 @@ Prometheus evaluates these rules according to the configuration in `alert_rules.
 This exercise uses randomly generated simulated delivery data. The metrics do not represent real delivery operations.
 
 The Python application and Docker containers must be running for live monitoring. Jenkins pipeline integration can be documented separately if required by the lab instructions.
+CI polling test: Jenkins checks this repository for new commits.
